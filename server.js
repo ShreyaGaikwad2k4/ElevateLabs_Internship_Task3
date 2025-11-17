@@ -5,8 +5,6 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
-// --- IN-MEMORY DATA STORE (Not persistent - data is reset on server restart) ---
-// This is an array that stores the books temporarily while the server is running.
 let books = [
     { id: '1', title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', isbn: '9780743273565', quantity: 15 },
     { id: '2', title: '1984', author: 'George Orwell', isbn: '9780451524935', quantity: 8 },
@@ -14,17 +12,12 @@ let books = [
 let nextId = 3; 
 
 // Middleware setup
-app.use(cors()); // Allows your HTML file to communicate with this server
+app.use(cors()); 
 app.use(bodyParser.json());
 
-// Helper function to find book index
+
 const findBookIndex = (id) => books.findIndex(book => book.id === id);
 
-// ----------------------------------------------------------------------
-// API Endpoints (CRUD)
-// ----------------------------------------------------------------------
-
-// GET /api/books - Retrieve all books (READ)
 app.get('/api/books', (req, res) => {
     // Send the current list of books
     console.log(`Fetched ${books.length} books.`);
@@ -63,7 +56,6 @@ app.put('/api/books/:id', (req, res) => {
         return res.status(404).json({ error: 'Book not found.' });
     }
 
-    // Update fields while ensuring quantity is treated as an integer
     books[index] = { 
         ...books[index], 
         ...updates,
@@ -74,7 +66,6 @@ app.put('/api/books/:id', (req, res) => {
     res.status(200).json(books[index]);
 });
 
-// DELETE /api/books/:id - Remove a book (DELETE)
 app.delete('/api/books/:id', (req, res) => {
     const bookId = req.params.id;
     const index = findBookIndex(bookId);
@@ -92,9 +83,7 @@ app.delete('/api/books/:id', (req, res) => {
 });
 
 
-// Serve the HTML file
 app.get('/', (req, res) => {
-    // NOTE: This assumes you have a frontend file named 'book_inventory.html' in the same directory.
     res.sendFile(__dirname + '/book_inventory.html');
 });
 
@@ -104,4 +93,5 @@ app.listen(PORT, () => {
     console.log(`\nServer is running on http://localhost:${PORT}`);
     console.log(`Open the Book Inventory App in your browser at: http://localhost:${PORT}`);
     console.log(`\nNOTE: Data is NOT persistent; it resets when the server stops.`);
+
 });
