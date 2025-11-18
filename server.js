@@ -1,97 +1,67 @@
+// server.js
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-
 const app = express();
 const PORT = 3000;
 
-let books = [
-    { id: '1', title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', isbn: '9780743273565', quantity: 15 },
-    { id: '2', title: '1984', author: 'George Orwell', isbn: '9780451524935', quantity: 8 },
-];
-let nextId = 3; 
+app.use(express.json()); // parse JSON body
 
-// Middleware setup
-app.use(cors()); 
-app.use(bodyParser.json());
+// In-memory store
+let books = [];
+let nextId = 1; // incremental id
 
-
-const findBookIndex = (id) => books.findIndex(book => book.id === id);
-
-app.get('/api/books', (req, res) => {
-    // Send the current list of books
-    console.log(`Fetched ${books.length} books.`);
-    res.status(200).json(books);
+// GET /books - return all books
+app.get('/books', (req, res) => {
+  res.json(books);
 });
 
-// POST /api/books - Add a new book (CREATE)
-app.post('/api/books', (req, res) => {
-    const { title, author, isbn, quantity } = req.body;
-    
-    // Basic validation
-    if (!title || !author || !isbn || !quantity) {
-        return res.status(400).json({ error: 'Missing required fields (title, author, isbn, quantity).' });
-    }
-
-    const newBook = {
-        id: String(nextId++),
-        title,
-        author,
-        isbn,
-        quantity: parseInt(quantity, 10),
-    };
-
-    books.push(newBook);
-    console.log('Book added with ID:', newBook.id);
-    res.status(201).json(newBook);
+// GET /books/:id - return single book
+app.get('/books/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const book = books.find(b => b.id === id);
+  if (!book) return res.status(404).json({ error: 'Book not found' });
+  res.json(book);
 });
 
-// PUT /api/books/:id - Update a book (UPDATE)
-app.put('/api/books/:id', (req, res) => {
-    const bookId = req.params.id;
-    const updates = req.body;
-    const index = findBookIndex(bookId);
-
-    if (index === -1) {
-        return res.status(404).json({ error: 'Book not found.' });
-    }
-
-    books[index] = { 
-        ...books[index], 
-        ...updates,
-        quantity: updates.quantity !== undefined ? parseInt(updates.quantity, 10) : books[index].quantity
-    };
-
-    console.log('Book updated:', bookId);
-    res.status(200).json(books[index]);
+// POST /books - add new book
+app.post('/books', (req, res) => {
+  const { title, author } = req.body;
+  if (!title || !author) {
+    return res.status(400).json({ error: 'title and author are required' });
+  }
+  const newBook = { id: nextId++, title, author };
+  books.push(newBook);
+  res.status(201).json(newBook);
 });
 
-app.delete('/api/books/:id', (req, res) => {
-    const bookId = req.params.id;
-    const index = findBookIndex(bookId);
+// PUT /books/:id - update a book by id
+app.put('/books/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const { title, author } = req.body;
+  const index = books.findIndex(b => b.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Book not found' });
 
-    if (index === -1) {
-        return res.status(404).json({ error: 'Book not found.' });
-    }
+  // update only provided fields
+  if (title !== undefined) books[index].title = title;
+  if (author !== undefined) books[index].author = author;
 
-    // Remove the book from the array
-    books.splice(index, 1);
-    console.log('Book deleted:', bookId);
-    
-    // 204 No Content for successful deletion
-    res.status(204).send(); 
+  res.json(books[index]);
 });
 
+// DELETE /books/:id - remove a book
+app.delete('/books/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const index = books.findIndex(b => b.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Book not found' });
 
+  const removed = books.splice(index, 1)[0];
+  res.json({ message: 'Book deleted', book: removed });
+});
+
+// Simple root message
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/book_inventory.html');
+  res.send('Books API running. Use /books to interact.');
 });
 
-
-// Start the server
 app.listen(PORT, () => {
-    console.log(`\nServer is running on http://localhost:${PORT}`);
-    console.log(`Open the Book Inventory App in your browser at: http://localhost:${PORT}`);
-    console.log(`\nNOTE: Data is NOT persistent; it resets when the server stops.`);
-
+  console.log(`Server running on http://localhost:${PORT}`);
 });
